@@ -1,3 +1,6 @@
 export default defineBackground(() => {
-  console.log('Hello background!', { id: browser.runtime.id });
+  // background.js
+  import('@inboxsdk/core/background.js').then(() => {
+    console.log('loaded inboxsdk');
+  })
 });
