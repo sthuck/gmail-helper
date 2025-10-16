@@ -1,4 +1,4 @@
-import InboxSDK from '@inboxsdk/core';
+import InboxSDK, { ButtonDescriptor, ThreadRowView, ThreadView } from '@inboxsdk/core';
 import userIcon from '../assets/user.svg';
 
 function extractSenderEmail(fromHeader: string): string {
@@ -11,9 +11,15 @@ function extractSenderEmail(fromHeader: string): string {
   return fromHeader.trim();
 }
 
-function searchEmailsFromSender(sdk: any, senderEmail: string) {
-  const searchQuery = `from:${senderEmail}`;
-  console.log('Searching for emails from:', senderEmail);
+function searchEmailsFromSender(sdk: any, senderEmail: string | string[]) {
+  // Handle both single email and array of emails
+  const emails = Array.isArray(senderEmail) ? senderEmail : [senderEmail];
+  
+  // Remove duplicates and filter out any null/undefined values
+  const uniqueEmails = [...new Set(emails.flat().filter(email => email))];
+  
+  // Construct search query with multiple "from:" clauses joined by OR
+  const searchQuery = uniqueEmails.map(email => `from:${email}`).join(' OR ');
   
   // Navigate to search results
   sdk.Router.goto(sdk.Router.createLink(sdk.Router.NativeRouteIDs.SEARCH, {
@@ -27,66 +33,36 @@ export default defineContentScript({
     console.log('Gmail helper content script loaded');
     
     InboxSDK.load(2, 'sdk_gmailByContact_b147f3dfc5').then(function(sdk) {
-      console.log('InboxSDK loaded successfully');
       sdk.Toolbars.registerThreadButton({
         title: 'Find all emails from sender',
         iconUrl: userIcon,
         onClick: function(event) {
           console.log('event', event);
+          if (event.position == 'THREAD') {
+            const senderEmails = event.selectedThreadViews.flatMap(tv => extractFirstSender(tv)).filter(email => email !== null);
+            searchEmailsFromSender(sdk, senderEmails);
+          } else if (event.position == 'LIST' || event.position == 'ROW') {
+            const senderEmails = event.selectedThreadRowViews.map(trv => {
+              const senderEmail = trv.getContacts()[0].emailAddress
+              return senderEmail;
+            });
+            searchEmailsFromSender(sdk, senderEmails);
+          }
         }
       })
-      // Add button to thread list view when threads are selected
-      sdk.Lists.registerThreadRowViewHandler(function(threadRowView) {
-        threadRowView.addButton({
-          title: 'Find all emails from sender',
-          iconUrl: userIcon,
-          hasDropdown: false,
-          onClick: function(event: any) {
-            const thread = threadRowView.getThreadView();
-            const messages = thread.getMessageViews();
-            if (messages.length > 0) {
-              const fromHeader = messages[0].getSender().emailAddress;
-              const senderEmail = extractSenderEmail(fromHeader);
-              searchEmailsFromSender(sdk, senderEmail);
-            }
-          },
-        });
-      });
-      
-      // Add button to conversation view (inside individual emails)
-      sdk.Conversations.registerThreadViewHandler(function(threadView) {
-        threadView.addSubjectButton({
-          title: 'Find all emails from sender',
-          iconUrl: userIcon,
-          onClick: function(event) {
-            const messageViews = threadView.getMessageViews();
-            if (messageViews.length > 0) {
-              // Use the first message to get sender info
-              const firstMessage = messageViews[0];
-              const fromHeader = firstMessage.getSender().emailAddress;
-              const senderEmail = extractSenderEmail(fromHeader);
-              searchEmailsFromSender(sdk, senderEmail);
-            }
-          },
-        });
-      });
-      
-      // Add button to individual message views within conversations
-      sdk.Conversations.registerMessageViewHandler(function(messageView) {
-        messageView.addToolbarButton({
-          section: 'MORE',
-          title: 'Find all emails from this sender',
-          iconUrl: userIcon,
-          onClick: function(event) {
-            const fromHeader = messageView.getSender().emailAddress;
-            const senderEmail = extractSenderEmail(fromHeader);
-            searchEmailsFromSender(sdk, senderEmail);
-          },
-        });
-      });
       
     }).catch(function(err) {
       console.error('Failed to load InboxSDK:', err);
     });
   },
 });
+function extractFirstSender(thread: InboxSDK.ThreadView): string | null {
+  const messages = thread.getMessageViews();
+  if (messages.length > 0) {
+    const fromHeader = messages[0].getSender().emailAddress;
+    const senderEmail = extractSenderEmail(fromHeader);
+    return senderEmail;
+  }
+  return null;
+}
+

@@ -1,8 +1,8 @@
 {
-  "name": "wxt-svelte-starter",
-  "description": "manifest.json description",
+  "name": "gmail-find-sender-emails",
+  "description": "a very small extension to find all emails from a sender, similar to a button that existed 10 years ago and was ruthlessly removed",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -25,6 +25,6 @@
   },
   "packageManager": "pnpm@8.6.3+sha1.30b2ad9776a393ccd1766239fd21e0c14a3c3acf",
   "dependencies": {
-    "@inboxsdk/core": "^2.2.7"
+    "@inboxsdk/core": "^2.2.8"
   }
 }
