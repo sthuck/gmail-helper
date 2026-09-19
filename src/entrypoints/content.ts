@@ -27,7 +27,10 @@ function searchEmailsFromSenders(
 export default defineContentScript({
   matches: ['*://mail.google.com/*'],
   main() {
-    InboxSDK.load(2, 'sdk_gmailByContact_b147f3dfc5').then((sdk) => {
+    InboxSDK.load(2, 'sdk_gmailByContact_b147f3dfc5', {
+      eventTracking: false,
+      globalErrorLogging: false,
+    }).then((sdk) => {
       sdk.Toolbars.registerThreadButton({
         title: 'Find all emails from sender',
         iconUrl: userIcon,
