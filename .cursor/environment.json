@@ -1,0 +1,4 @@
+{
+  "name": "gmail-helper",
+  "install": "pnpm install --frozen-lockfile"
+}
