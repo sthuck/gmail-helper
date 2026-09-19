@@ -1,6 +1,5 @@
+import '@inboxsdk/core/background.js';
+
 export default defineBackground(() => {
-  // background.js
-  import('@inboxsdk/core/background.js').then(() => {
-    console.log('loaded inboxsdk');
-  })
+  console.log('Gmail helper background loaded');
 });

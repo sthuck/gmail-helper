@@ -7,5 +7,16 @@ export default defineConfig({
   manifest: {
     permissions: ["scripting"],
     host_permissions: ["https://mail.google.com/*"],
+    web_accessible_resources: [
+      {
+        resources: ["pageWorld.js"],
+        matches: ["https://mail.google.com/*"],
+      },
+    ],
+    browser_specific_settings: {
+      gecko: {
+        strict_min_version: "128.0",
+      },
+    },
   },
 });

@@ -1,68 +1,61 @@
-import InboxSDK, { ButtonDescriptor, ThreadRowView, ThreadView } from '@inboxsdk/core';
+import InboxSDK, {
+  type InboxSDK as InboxSDKInstance,
+  type ThreadView,
+} from '@inboxsdk/core';
 import userIcon from '../assets/user.svg';
 
 function extractSenderEmail(fromHeader: string): string {
-  // Extract email from "Name <email@domain.com>" format
   const emailMatch = fromHeader.match(/<([^>]+)>/);
-  if (emailMatch) {
-    return emailMatch[1];
-  }
-  // If no angle brackets, assume the whole string is the email
-  return fromHeader.trim();
+  return emailMatch?.[1] ?? fromHeader.trim();
 }
 
-function searchEmailsFromSender(sdk: any, senderEmail: string | string[]) {
-  // Handle both single email and array of emails
-  const emails = Array.isArray(senderEmail) ? senderEmail : [senderEmail];
-  
-  // Remove duplicates and filter out any null/undefined values
-  const uniqueEmails = [...new Set(emails.flat().filter(email => email))];
-  
-  // Construct search query with multiple "from:" clauses joined by OR
-  const searchQuery = uniqueEmails.map(email => `from:${email}`).join(' OR ');
-  
-  // Navigate to search results
-  sdk.Router.goto(sdk.Router.createLink(sdk.Router.NativeRouteIDs.SEARCH, {
-    query: searchQuery
-  }));
+function searchEmailsFromSenders(
+  sdk: InboxSDKInstance,
+  senderEmails: Array<string>,
+) {
+  const uniqueEmails = [...new Set(senderEmails.filter(Boolean))];
+  if (uniqueEmails.length === 0) return;
+
+  const searchQuery = uniqueEmails.map((email) => `from:${email}`).join(' OR ');
+  sdk.Router.goto(
+    sdk.Router.createLink(sdk.Router.NativeRouteIDs.SEARCH, {
+      query: searchQuery,
+    }),
+  );
 }
 
 export default defineContentScript({
   matches: ['*://mail.google.com/*'],
   main() {
-    console.log('Gmail helper content script loaded');
-    
-    InboxSDK.load(2, 'sdk_gmailByContact_b147f3dfc5').then(function(sdk) {
+    InboxSDK.load(2, 'sdk_gmailByContact_b147f3dfc5').then((sdk) => {
       sdk.Toolbars.registerThreadButton({
         title: 'Find all emails from sender',
         iconUrl: userIcon,
-        onClick: function(event) {
-          console.log('event', event);
-          if (event.position == 'THREAD') {
-            const senderEmails = event.selectedThreadViews.flatMap(tv => extractFirstSender(tv)).filter(email => email !== null);
-            searchEmailsFromSender(sdk, senderEmails);
-          } else if (event.position == 'LIST' || event.position == 'ROW') {
-            const senderEmails = event.selectedThreadRowViews.map(trv => {
-              const senderEmail = trv.getContacts()[0].emailAddress
-              return senderEmail;
-            });
-            searchEmailsFromSender(sdk, senderEmails);
+        onClick(event) {
+          if (event.position === 'THREAD') {
+            const senderEmails = event.selectedThreadViews
+              .map(extractFirstSender)
+              .filter((email): email is string => email !== null);
+            searchEmailsFromSenders(sdk, senderEmails);
+          } else {
+            const senderEmails = event.selectedThreadRowViews
+              .map((thread) => thread.getContacts()[0]?.emailAddress)
+              .filter((email): email is string => Boolean(email));
+            searchEmailsFromSenders(sdk, senderEmails);
           }
-        }
-      })
-      
-    }).catch(function(err) {
-      console.error('Failed to load InboxSDK:', err);
+        },
+      });
+    }).catch((error: unknown) => {
+      console.error('Failed to load InboxSDK:', error);
     });
   },
 });
-function extractFirstSender(thread: InboxSDK.ThreadView): string | null {
+
+function extractFirstSender(thread: ThreadView): string | null {
   const messages = thread.getMessageViews();
-  if (messages.length > 0) {
-    const fromHeader = messages[0].getSender().emailAddress;
-    const senderEmail = extractSenderEmail(fromHeader);
-    return senderEmail;
-  }
-  return null;
+  const firstMessage = messages[0];
+  return firstMessage
+    ? extractSenderEmail(firstMessage.getSender().emailAddress)
+    : null;
 }
 
