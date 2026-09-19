@@ -1,7 +1,8 @@
-import InboxSDK, {
-  type InboxSDK as InboxSDKInstance,
-  type ThreadView,
+import type {
+  InboxSDK as InboxSDKInstance,
+  ThreadView,
 } from '@inboxsdk/core';
+import { browser } from 'wxt/browser';
 import userIcon from '../assets/user.svg';
 
 function extractSenderEmail(fromHeader: string): string {
@@ -26,7 +27,13 @@ function searchEmailsFromSenders(
 
 export default defineContentScript({
   matches: ['*://mail.google.com/*'],
-  main() {
+  async main() {
+    const extensionGlobal = globalThis as unknown as {
+      chrome?: typeof browser;
+    };
+    extensionGlobal.chrome ??= browser;
+
+    const { default: InboxSDK } = await import('@inboxsdk/core');
     InboxSDK.load(2, 'sdk_gmailByContact_b147f3dfc5', {
       eventTracking: false,
       globalErrorLogging: false,
