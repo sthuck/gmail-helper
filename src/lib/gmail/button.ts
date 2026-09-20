@@ -1,45 +1,45 @@
-import { BUTTON_ATTRIBUTE, ICON_SVG, LABEL } from './constants';
-import { searchEmailsFromSenders } from './senders';
+import { BUTTON_ATTRIBUTE, ICON_SVG, LABEL } from "./constants";
+import { searchEmailsFromSenders } from "./senders";
 
 const HOST_STYLES = [
-  ['display', 'inline-flex'],
-  ['align-items', 'center'],
-  ['justify-content', 'center'],
-  ['box-sizing', 'border-box'],
-  ['width', '40px'],
-  ['height', '40px'],
-  ['min-width', '40px'],
-  ['min-height', '40px'],
-  ['margin', '0 4px'],
-  ['padding', '0'],
-  ['border', '0'],
-  ['flex', '0 0 auto'],
-  ['visibility', 'visible'],
-  ['opacity', '1'],
-  ['overflow', 'visible'],
-  ['position', 'relative'],
-  ['cursor', 'pointer'],
-  ['vertical-align', 'middle'],
+  ["display", "inline-flex"],
+  ["align-items", "center"],
+  ["justify-content", "center"],
+  ["box-sizing", "border-box"],
+  ["width", "40px"],
+  ["height", "20px"],
+  ["min-width", "40px"],
+  ["min-height", "20px"],
+  // ['margin', '0 4px'],
+  ["padding", "0"],
+  ["border", "0"],
+  ["flex", "0 0 auto"],
+  ["visibility", "visible"],
+  ["opacity", "1"],
+  ["overflow", "visible"],
+  ["position", "relative"],
+  ["cursor", "pointer"],
+  ["vertical-align", "middle"],
 ] as const;
 
 export function applyHostStyles(element: HTMLElement) {
   for (const [property, value] of HOST_STYLES) {
-    element.style.setProperty(property, value, 'important');
+    element.style.setProperty(property, value, "important");
   }
-  element.removeAttribute('hidden');
+  element.removeAttribute("hidden");
 }
 
 export function createToolbarIcon(getSenders: () => string[]): HTMLElement {
-  const host = document.createElement('div');
-  host.setAttribute(BUTTON_ATTRIBUTE, 'toolbar');
-  host.setAttribute('role', 'button');
-  host.setAttribute('tabindex', '0');
-  host.setAttribute('aria-label', LABEL);
-  host.setAttribute('data-tooltip', LABEL);
+  const host = document.createElement("div");
+  host.setAttribute(BUTTON_ATTRIBUTE, "toolbar");
+  host.setAttribute("role", "button");
+  host.setAttribute("tabindex", "0");
+  host.setAttribute("aria-label", LABEL);
+  host.setAttribute("data-tooltip", LABEL);
   host.title = LABEL;
   applyHostStyles(host);
 
-  const root = host.attachShadow({ mode: 'open' });
+  const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `
     <style>
       :host { display: inline-flex !important; }
@@ -68,18 +68,21 @@ export function createToolbarIcon(getSenders: () => string[]): HTMLElement {
     event.stopPropagation();
     searchEmailsFromSenders(getSenders());
   };
-  root.querySelector('button')?.addEventListener('click', activate);
-  host.addEventListener('click', activate);
-  host.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') activate(event);
+  root.querySelector("button")?.addEventListener("click", activate);
+  host.addEventListener("click", activate);
+  host.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") activate(event);
   });
 
   new MutationObserver(() => {
-    if (host.hasAttribute('hidden') || host.style.getPropertyValue('display') !== 'inline-flex') {
+    if (
+      host.hasAttribute("hidden") ||
+      host.style.getPropertyValue("display") !== "inline-flex"
+    ) {
       applyHostStyles(host);
     }
   }).observe(host, {
-    attributeFilter: ['style', 'hidden', 'class'],
+    attributeFilter: ["style", "hidden", "class"],
     attributes: true,
   });
   return host;
