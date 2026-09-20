@@ -81,124 +81,68 @@ function searchEmailsFromSenders(senders: string[]) {
   window.location.hash = `#search/${encodeURIComponent(query)}`;
 }
 
-function applyHostStyles(host: HTMLElement, kind: 'message' | 'toolbar') {
-  const styles: Array<[string, string]> = [
+function createToolbarIcon(getSenders: () => string[]): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'G-Ni J-J5-Ji';
+  wrap.setAttribute(BUTTON_ATTRIBUTE, 'toolbar');
+
+  const button = document.createElement('div');
+  button.className = 'T-I J-J5-Ji T-I-ax7 L3';
+  button.setAttribute('role', 'button');
+  button.setAttribute('tabindex', '0');
+  button.setAttribute('aria-label', LABEL);
+  button.setAttribute('data-tooltip', LABEL);
+  button.title = LABEL;
+
+  const icon = document.createElement('div');
+  icon.setAttribute('aria-hidden', 'true');
+  for (const [property, value] of [
     ['display', 'inline-flex'],
     ['align-items', 'center'],
     ['justify-content', 'center'],
-    ['box-sizing', 'border-box'],
-    ['width', 'auto'],
-    ['height', kind === 'toolbar' ? '36px' : '32px'],
-    ['min-width', '36px'],
-    ['min-height', '32px'],
-    ['margin', kind === 'toolbar' ? '0 8px' : '0 6px'],
-    ['padding', '0'],
-    ['border', '0'],
-    ['visibility', 'visible'],
-    ['opacity', '1'],
-    ['overflow', 'visible'],
-    ['position', 'relative'],
-    ['z-index', '8'],
-    ['pointer-events', 'auto'],
-    ['vertical-align', 'middle'],
-    ['flex', '0 0 auto'],
-  ];
-  for (const [property, value] of styles) {
-    host.style.setProperty(property, value, 'important');
+    ['width', '20px'],
+    ['height', '20px'],
+    ['pointer-events', 'none'],
+  ] as const) {
+    icon.style.setProperty(property, value, 'important');
   }
-}
-
-function createButton(kind: 'message' | 'toolbar', getEmails: () => string[]): HTMLElement {
-  const host = document.createElement('div');
-  host.setAttribute(BUTTON_ATTRIBUTE, kind);
-  host.setAttribute('aria-label', LABEL);
-  host.title = LABEL;
-  applyHostStyles(host, kind);
-
-  const root = host.attachShadow({ mode: 'open' });
+  const root = icon.attachShadow({ mode: 'open' });
   root.innerHTML = `
     <style>
-      :host { display: inline-flex !important; }
-      button {
-        align-items: center;
-        background: #e8f0fe;
-        border: 1px solid #d2e3fc;
-        border-radius: 18px;
-        color: #1a73e8;
-        cursor: pointer;
-        display: inline-flex;
-        font: 500 13px/1.2 "Google Sans", Roboto, Arial, sans-serif;
-        gap: 6px;
-        height: 28px;
-        margin: 0;
-        min-height: 28px;
-        min-width: auto;
-        padding: 0 10px;
-        white-space: nowrap;
-      }
-      button:hover, button:focus-visible {
-        background: #d2e3fc;
-        outline: none;
-      }
-      svg { display: block; flex: 0 0 auto; }
+      :host { display: inline-flex !important; color: #444746; }
+      svg { display: block; width: 20px; height: 20px; }
     </style>
-    <button type="button" title="${LABEL}">
-      ${ICON_SVG}
-      <span>From sender</span>
-    </button>
+    ${ICON_SVG}
   `;
+  button.append(icon);
+  wrap.append(button);
 
   const activate = (event: Event) => {
     event.preventDefault();
     event.stopPropagation();
-    searchEmailsFromSenders(getEmails());
+    searchEmailsFromSenders(getSenders());
   };
-  root.querySelector('button')?.addEventListener('click', activate);
-  host.addEventListener('click', activate);
-  return host;
+  button.addEventListener('click', activate);
+  button.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      activate(event);
+    }
+  });
+  return wrap;
 }
 
-function getMessageContainers(): HTMLElement[] {
-  const found = new Set<HTMLElement>();
-  const selectors = [
-    '[data-legacy-message-id]',
-    '[data-message-id]',
-    '[data-legacy-thread-id][data-legacy-message-id]',
+function getOpenMessageSenders(): string[] {
+  const containers = [
+    ...document.querySelectorAll<HTMLElement>('[data-legacy-message-id], [data-message-id]'),
   ];
-  for (const selector of selectors) {
-    for (const element of document.querySelectorAll<HTMLElement>(selector)) {
-      if (element.querySelector('[email], [data-hovercard-id]')) {
-        found.add(element);
-      }
-    }
-  }
-  if (found.size === 0) {
-    for (const sender of document.querySelectorAll<HTMLElement>('[email], span.gD')) {
-      if (!getEmail(sender)) continue;
-      const container =
-        sender.closest<HTMLElement>('[data-legacy-message-id], [data-message-id], .adn, [role="listitem"]') ??
-        sender.parentElement;
-      if (container) found.add(container);
-    }
-  }
-  return [...found];
-}
+  const senders = containers
+    .map(getSenderQueryToken)
+    .filter((sender): sender is string => sender !== null);
+  if (senders.length > 0) return [...new Set(senders)];
 
-function mountMessageButtons() {
-  for (const message of getMessageContainers()) {
-    if (message.querySelector(`[${BUTTON_ATTRIBUTE}="message"]`)) continue;
-    const email = getEmail(message);
-    if (!email) continue;
-
-    const sender =
-      message.querySelector<HTMLElement>('[email], [data-hovercard-id], span.gD, span.zF') ??
-      message;
-    const button = createButton('message', () => {
-      const next = getEmail(message);
-      return next ? [next] : [];
-    });
-    sender.insertAdjacentElement('afterend', button);
-  }
+  const main = document.querySelector('[role="main"]');
+  const fallback = main ? getSenderQueryToken(main) : null;
+  return fallback ? [fallback] : [];
 }
 
 function getSelectedRows(): HTMLElement[] {
@@ -227,38 +171,56 @@ function isVisible(element: HTMLElement): boolean {
   return rect.width > 0 && rect.height > 0;
 }
 
-function getSelectionMount(): HTMLElement | null {
-  const toolbar = [...document.querySelectorAll<HTMLElement>('[gh="tm"], [role="toolbar"]')].find(isVisible);
-  if (toolbar) return toolbar;
+function getActionToolbar(): HTMLElement | null {
+  const messageToolbar = document.querySelector<HTMLElement>('[gh="mtb"]');
+  if (messageToolbar && isVisible(messageToolbar)) return messageToolbar;
 
-  const row = getSelectedRows().find(isVisible);
-  if (!row) return null;
-  return row.querySelector<HTMLElement>('[name], .yW, td') ?? row;
+  return [...document.querySelectorAll<HTMLElement>('[gh="tm"]')].find((toolbar) => {
+    return isVisible(toolbar) && toolbar.querySelector('[role="button"]');
+  }) ?? null;
 }
 
-function syncSelectionButton() {
-  const existing = [...document.querySelectorAll<HTMLElement>(`[${BUTTON_ATTRIBUTE}="toolbar"]`)];
-  const senders = getSelectedSenderEmails();
-  const mount = getSelectionMount();
+function getToolbarSenders(): string[] {
+  const selected = getSelectedSenderEmails();
+  if (selected.length > 0) return selected;
+  if (document.querySelector('[gh="mtb"]')) return getOpenMessageSenders();
+  return [];
+}
 
-  if (!mount || senders.length === 0) {
+function insertToolbarButton(toolbar: HTMLElement, button: HTMLElement) {
+  const actionButtons = [...toolbar.querySelectorAll<HTMLElement>(':scope > [role="button"], :scope > .G-Ni [role="button"]')];
+  const lastAction = actionButtons.at(-1);
+  const lastGroup = lastAction?.closest<HTMLElement>('.G-Ni') ?? lastAction;
+  if (lastGroup?.parentElement === toolbar) {
+    lastGroup.before(button);
+    return;
+  }
+  toolbar.append(button);
+}
+
+function syncToolbarButton() {
+  document.querySelectorAll(`[${BUTTON_ATTRIBUTE}="message"]`).forEach((legacy) => legacy.remove());
+
+  const existing = [...document.querySelectorAll<HTMLElement>(`[${BUTTON_ATTRIBUTE}="toolbar"]`)];
+  const senders = getToolbarSenders();
+  const toolbar = getActionToolbar();
+
+  if (!toolbar || senders.length === 0) {
     existing.forEach((button) => button.remove());
     return;
   }
 
-  const button = existing.shift() ?? createButton('toolbar', getSelectedSenderEmails);
+  const button = existing.shift() ?? createToolbarIcon(getToolbarSenders);
   existing.forEach((duplicate) => duplicate.remove());
-  applyHostStyles(button, 'toolbar');
-  if (button.parentElement !== mount) mount.append(button);
+  if (button.parentElement !== toolbar) insertToolbarButton(toolbar, button);
 }
 
 function startObserver() {
   const root = document.body ?? document.documentElement;
   let syncQueued = false;
-  const sync = () => {
+    const sync = () => {
     syncQueued = false;
-    mountMessageButtons();
-    syncSelectionButton();
+    syncToolbarButton();
   };
   const scheduleSync = () => {
     if (syncQueued) return;
