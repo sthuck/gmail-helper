@@ -173,10 +173,26 @@ function isVisible(element: HTMLElement): boolean {
   return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
 }
 
+function resolveToolbarMount(toolbar: HTMLElement): HTMLElement {
+  let current = toolbar;
+  while (true) {
+    const visibleChildren = [...current.children].filter((child): child is HTMLElement => {
+      return child instanceof HTMLElement && isVisible(child);
+    });
+    if (visibleChildren.length === 1 && visibleChildren[0].getAttribute('role') !== 'button') {
+      current = visibleChildren[0];
+      continue;
+    }
+    break;
+  }
+  return current;
+}
+
 function getListToolbar(): HTMLElement | null {
-  return [...document.querySelectorAll<HTMLElement>('[gh="tm"]')].find((toolbar) => {
-    return isVisible(toolbar) && toolbar.querySelector(':scope > [role="button"]');
-  }) ?? null;
+  const toolbar = [...document.querySelectorAll<HTMLElement>('[gh="tm"]')].find((candidate) => {
+    return isVisible(candidate) && candidate.querySelector('[role="button"]');
+  });
+  return toolbar ? resolveToolbarMount(toolbar) : null;
 }
 
 function getActionToolbar(): HTMLElement | null {
@@ -185,7 +201,7 @@ function getActionToolbar(): HTMLElement | null {
   }
 
   const messageToolbar = document.querySelector<HTMLElement>('[gh="mtb"]');
-  if (messageToolbar && isVisible(messageToolbar)) return messageToolbar;
+  if (messageToolbar && isVisible(messageToolbar)) return resolveToolbarMount(messageToolbar);
 
   return getListToolbar();
 }
