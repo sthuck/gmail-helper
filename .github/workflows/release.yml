@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.target_commitish }}
+
+      - name: Resolve version from tag
+        id: version
+        run: |
+          TAG='${{ github.event.release.tag_name }}'
+          VERSION="${TAG#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.]+)?$ ]]; then
+            echo "Release tag must be vX.Y.Z (got ${TAG})"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.6.3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Update package.json version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const version = process.env.VERSION;
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          if (pkg.version === version) {
+            console.log(`package.json already ${version}`);
+            process.exit(0);
+          }
+          pkg.version = version;
+          fs.writeFileSync("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
+          console.log(`updated package.json to ${version}`);
+          NODE
+
+      - name: Commit version bump
+        env:
+          BRANCH: ${{ github.event.release.target_commitish }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          if git diff --cached --quiet; then
+            echo "No version change to commit"
+            exit 0
+          fi
+          git commit -m "Release v${VERSION}"
+          if git ls-remote --heads origin "$BRANCH" | grep -q .; then
+            git push origin "HEAD:${BRANCH}"
+          else
+            echo "Skipping version commit push; ${BRANCH} is not a branch"
+          fi
+
+      - name: Zip Chrome
+        run: pnpm zip
+
+      - name: Zip Firefox
+        run: pnpm zip:firefox
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release upload "$TAG" \
+            ".output/gmail-find-sender-emails-${VERSION}-chrome.zip" \
+            ".output/gmail-find-sender-emails-${VERSION}-firefox.zip" \
+            --clobber
