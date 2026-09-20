@@ -168,16 +168,26 @@ function getSelectedSenderEmails(): string[] {
 
 function isVisible(element: HTMLElement): boolean {
   const rect = element.getBoundingClientRect();
-  return rect.width > 0 && rect.height > 0;
+  if (rect.width <= 0 || rect.height <= 0) return false;
+  const style = getComputedStyle(element);
+  return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
+function getListToolbar(): HTMLElement | null {
+  return [...document.querySelectorAll<HTMLElement>('[gh="tm"]')].find((toolbar) => {
+    return isVisible(toolbar) && toolbar.querySelector(':scope > [role="button"]');
+  }) ?? null;
 }
 
 function getActionToolbar(): HTMLElement | null {
+  if (getSelectedRows().length > 0) {
+    return getListToolbar();
+  }
+
   const messageToolbar = document.querySelector<HTMLElement>('[gh="mtb"]');
   if (messageToolbar && isVisible(messageToolbar)) return messageToolbar;
 
-  return [...document.querySelectorAll<HTMLElement>('[gh="tm"]')].find((toolbar) => {
-    return isVisible(toolbar) && toolbar.querySelector('[role="button"]');
-  }) ?? null;
+  return getListToolbar();
 }
 
 function getToolbarSenders(): string[] {
