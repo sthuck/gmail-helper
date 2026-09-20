@@ -81,82 +81,88 @@ function searchEmailsFromSenders(senders: string[]) {
   window.location.hash = `#search/${encodeURIComponent(query)}`;
 }
 
+const HOST_STYLES = [
+  ['display', 'inline-flex'],
+  ['align-items', 'center'],
+  ['justify-content', 'center'],
+  ['box-sizing', 'border-box'],
+  ['width', '40px'],
+  ['height', '40px'],
+  ['min-width', '40px'],
+  ['min-height', '40px'],
+  ['margin', '0 4px'],
+  ['padding', '0'],
+  ['border', '0'],
+  ['flex', '0 0 auto'],
+  ['visibility', 'visible'],
+  ['opacity', '1'],
+  ['overflow', 'visible'],
+  ['position', 'relative'],
+  ['cursor', 'pointer'],
+  ['vertical-align', 'middle'],
+] as const;
+
+function applyHostStyles(element: HTMLElement) {
+  for (const [property, value] of HOST_STYLES) {
+    element.style.setProperty(property, value, 'important');
+  }
+  element.removeAttribute('hidden');
+}
+
 function createToolbarIcon(getSenders: () => string[]): HTMLElement {
-  const wrap = document.createElement('div');
-  wrap.className = 'G-Ni J-J5-Ji';
-  wrap.setAttribute(BUTTON_ATTRIBUTE, 'toolbar');
-  for (const [property, value] of [
-    ['display', 'inline-flex'],
-    ['align-items', 'center'],
-    ['justify-content', 'center'],
-    ['width', '40px'],
-    ['height', '40px'],
-    ['min-width', '40px'],
-    ['min-height', '40px'],
-    ['flex', '0 0 auto'],
-    ['visibility', 'visible'],
-    ['opacity', '1'],
-  ] as const) {
-    wrap.style.setProperty(property, value, 'important');
-  }
+  const host = document.createElement('div');
+  host.setAttribute(BUTTON_ATTRIBUTE, 'toolbar');
+  host.setAttribute('role', 'button');
+  host.setAttribute('tabindex', '0');
+  host.setAttribute('aria-label', LABEL);
+  host.setAttribute('data-tooltip', LABEL);
+  host.title = LABEL;
+  applyHostStyles(host);
 
-  const button = document.createElement('div');
-  button.className = 'T-I J-J5-Ji T-I-ax7 L3';
-  button.setAttribute('role', 'button');
-  button.setAttribute('tabindex', '0');
-  button.setAttribute('aria-label', LABEL);
-  button.setAttribute('data-tooltip', LABEL);
-  button.title = LABEL;
-  for (const [property, value] of [
-    ['display', 'inline-flex'],
-    ['align-items', 'center'],
-    ['justify-content', 'center'],
-    ['width', '40px'],
-    ['height', '40px'],
-    ['min-width', '40px'],
-    ['min-height', '40px'],
-    ['cursor', 'pointer'],
-    ['visibility', 'visible'],
-    ['opacity', '1'],
-  ] as const) {
-    button.style.setProperty(property, value, 'important');
-  }
-
-  const icon = document.createElement('div');
-  icon.setAttribute('aria-hidden', 'true');
-  for (const [property, value] of [
-    ['display', 'inline-flex'],
-    ['align-items', 'center'],
-    ['justify-content', 'center'],
-    ['width', '20px'],
-    ['height', '20px'],
-    ['pointer-events', 'none'],
-  ] as const) {
-    icon.style.setProperty(property, value, 'important');
-  }
-  const root = icon.attachShadow({ mode: 'open' });
+  const root = host.attachShadow({ mode: 'open' });
   root.innerHTML = `
     <style>
-      :host { display: inline-flex !important; color: #444746; }
+      :host { display: inline-flex !important; }
+      button {
+        align-items: center;
+        background: transparent;
+        border: 0;
+        border-radius: 50%;
+        color: #444746;
+        cursor: pointer;
+        display: inline-flex;
+        height: 32px;
+        justify-content: center;
+        margin: 0;
+        padding: 0;
+        width: 32px;
+      }
+      button:hover, button:focus-visible { background: rgba(60, 64, 67, 0.12); outline: none; }
       svg { display: block; width: 20px; height: 20px; }
     </style>
-    ${ICON_SVG}
+    <button type="button" title="${LABEL}">${ICON_SVG}</button>
   `;
-  button.append(icon);
-  wrap.append(button);
 
   const activate = (event: Event) => {
     event.preventDefault();
     event.stopPropagation();
     searchEmailsFromSenders(getSenders());
   };
-  button.addEventListener('click', activate);
-  button.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      activate(event);
-    }
+  root.querySelector('button')?.addEventListener('click', activate);
+  host.addEventListener('click', activate);
+  host.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') activate(event);
   });
-  return wrap;
+
+  new MutationObserver(() => {
+    if (host.hasAttribute('hidden') || host.style.getPropertyValue('display') !== 'inline-flex') {
+      applyHostStyles(host);
+    }
+  }).observe(host, {
+    attributeFilter: ['style', 'hidden', 'class'],
+    attributes: true,
+  });
+  return host;
 }
 
 function getOpenMessageSenders(): string[] {
@@ -216,12 +222,6 @@ function getToolbarRoot(): HTMLElement | null {
   }) ?? null;
 }
 
-function getVisibleGmailActions(root: HTMLElement): HTMLElement[] {
-  return [...root.querySelectorAll<HTMLElement>('.T-I[role="button"]')].filter((button) => {
-    return isVisible(button) && !button.closest(`[${BUTTON_ATTRIBUTE}]`);
-  });
-}
-
 function getToolbarSenders(): string[] {
   const selected = getSelectedSenderEmails();
   if (selected.length > 0) return selected;
@@ -230,11 +230,10 @@ function getToolbarSenders(): string[] {
 }
 
 function placeToolbarButton(root: HTMLElement, button: HTMLElement) {
-  const actions = getVisibleGmailActions(root);
-  const lastAction = actions.at(-1);
-  const lastGroup = lastAction?.closest<HTMLElement>('.G-Ni') ?? lastAction;
-  if (lastGroup?.parentElement) {
-    lastGroup.before(button);
+  const cluster = [...root.querySelectorAll<HTMLElement>('.G-tF')].find(isVisible)
+    ?? [...root.querySelectorAll<HTMLElement>('.G-Ni')].find(isVisible);
+  if (cluster?.parentElement) {
+    cluster.after(button);
     return;
   }
   root.append(button);
@@ -254,15 +253,17 @@ function syncToolbarButton() {
 
   const button = existing.shift() ?? createToolbarIcon(getToolbarSenders);
   existing.forEach((duplicate) => duplicate.remove());
+  applyHostStyles(button);
   if (!root.contains(button) || !isVisible(button)) {
     placeToolbarButton(root, button);
+    applyHostStyles(button);
   }
 }
 
 function startObserver() {
   const root = document.body ?? document.documentElement;
   let syncQueued = false;
-    const sync = () => {
+  const sync = () => {
     syncQueued = false;
     syncToolbarButton();
   };
