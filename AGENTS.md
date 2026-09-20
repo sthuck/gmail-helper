@@ -16,7 +16,7 @@ There is no InboxSDK, popup, or background/service-worker script. Chrome and Fir
 
 ## Development commands
 
-WXT + Svelte + TypeScript. Node 26 and pnpm 12 (`packageManager` in `package.json`):
+WXT 0.21 + Svelte + TypeScript. Node 26, pnpm 12 (`packageManager` in `package.json`), and Vite as a WXT peer:
 
 - `pnpm install` — install and run `wxt prepare`
 - `pnpm dev` / `pnpm dev:firefox` — development
@@ -37,8 +37,8 @@ Load unpacked from `.output/chrome-mv3` or as a Firefox temporary add-on from `.
 - `src/lib/gmail/toolbar.ts` — find the action toolbar, place and remount the icon
 - `src/lib/gmail/button.ts` — icon host, shadow DOM, style lock against Gmail CSS
 - `src/lib/gmail/senders.ts` — sender email/name extraction and search navigation
-- `src/lib/gmail/constants.ts` — shared selectors, label, icon SVG
-- `wxt.config.ts` — `host_permissions: https://mail.google.com/*` only
+- `src/lib/gmail/constants.ts` — shared selectors, label, icon SVG factory
+- `wxt.config.ts` — `host_permissions: https://mail.google.com/*`; Firefox `gecko` id and `data_collection_permissions`
 - `.cursor/environment.json` — Cloud Agent install (`pnpm install --frozen-lockfile`)
 
 Template leftovers (`src/lib/Counter.svelte`, default icons) are unused by the Gmail feature.
