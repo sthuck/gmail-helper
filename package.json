@@ -2,7 +2,7 @@
   "name": "gmail-find-sender-emails",
   "description": "a very small extension to find all emails from a sender, similar to a button that existed 10 years ago and was ruthlessly removed",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "engines": {
     "node": ">=26"
