@@ -85,6 +85,20 @@ function createToolbarIcon(getSenders: () => string[]): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'G-Ni J-J5-Ji';
   wrap.setAttribute(BUTTON_ATTRIBUTE, 'toolbar');
+  for (const [property, value] of [
+    ['display', 'inline-flex'],
+    ['align-items', 'center'],
+    ['justify-content', 'center'],
+    ['width', '40px'],
+    ['height', '40px'],
+    ['min-width', '40px'],
+    ['min-height', '40px'],
+    ['flex', '0 0 auto'],
+    ['visibility', 'visible'],
+    ['opacity', '1'],
+  ] as const) {
+    wrap.style.setProperty(property, value, 'important');
+  }
 
   const button = document.createElement('div');
   button.className = 'T-I J-J5-Ji T-I-ax7 L3';
@@ -93,6 +107,20 @@ function createToolbarIcon(getSenders: () => string[]): HTMLElement {
   button.setAttribute('aria-label', LABEL);
   button.setAttribute('data-tooltip', LABEL);
   button.title = LABEL;
+  for (const [property, value] of [
+    ['display', 'inline-flex'],
+    ['align-items', 'center'],
+    ['justify-content', 'center'],
+    ['width', '40px'],
+    ['height', '40px'],
+    ['min-width', '40px'],
+    ['min-height', '40px'],
+    ['cursor', 'pointer'],
+    ['visibility', 'visible'],
+    ['opacity', '1'],
+  ] as const) {
+    button.style.setProperty(property, value, 'important');
+  }
 
   const icon = document.createElement('div');
   icon.setAttribute('aria-hidden', 'true');
@@ -173,37 +201,25 @@ function isVisible(element: HTMLElement): boolean {
   return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
 }
 
-function resolveToolbarMount(toolbar: HTMLElement): HTMLElement {
-  let current = toolbar;
-  while (true) {
-    const visibleChildren = [...current.children].filter((child): child is HTMLElement => {
-      return child instanceof HTMLElement && isVisible(child);
-    });
-    if (visibleChildren.length === 1 && visibleChildren[0].getAttribute('role') !== 'button') {
-      current = visibleChildren[0];
-      continue;
-    }
-    break;
-  }
-  return current;
-}
-
-function getListToolbar(): HTMLElement | null {
-  const toolbar = [...document.querySelectorAll<HTMLElement>('[gh="tm"]')].find((candidate) => {
-    return isVisible(candidate) && candidate.querySelector('[role="button"]');
-  });
-  return toolbar ? resolveToolbarMount(toolbar) : null;
-}
-
-function getActionToolbar(): HTMLElement | null {
+function getToolbarRoot(): HTMLElement | null {
   if (getSelectedRows().length > 0) {
-    return getListToolbar();
+    return [...document.querySelectorAll<HTMLElement>('[gh="tm"]')].find((toolbar) => {
+      return isVisible(toolbar) && toolbar.querySelector('[role="button"]');
+    }) ?? null;
   }
 
   const messageToolbar = document.querySelector<HTMLElement>('[gh="mtb"]');
-  if (messageToolbar && isVisible(messageToolbar)) return resolveToolbarMount(messageToolbar);
+  if (messageToolbar && isVisible(messageToolbar)) return messageToolbar;
 
-  return getListToolbar();
+  return [...document.querySelectorAll<HTMLElement>('[gh="tm"]')].find((toolbar) => {
+    return isVisible(toolbar) && toolbar.querySelector('[role="button"]');
+  }) ?? null;
+}
+
+function getVisibleGmailActions(root: HTMLElement): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>('.T-I[role="button"]')].filter((button) => {
+    return isVisible(button) && !button.closest(`[${BUTTON_ATTRIBUTE}]`);
+  });
 }
 
 function getToolbarSenders(): string[] {
@@ -213,15 +229,15 @@ function getToolbarSenders(): string[] {
   return [];
 }
 
-function insertToolbarButton(toolbar: HTMLElement, button: HTMLElement) {
-  const actionButtons = [...toolbar.querySelectorAll<HTMLElement>(':scope > [role="button"], :scope > .G-Ni [role="button"]')];
-  const lastAction = actionButtons.at(-1);
+function placeToolbarButton(root: HTMLElement, button: HTMLElement) {
+  const actions = getVisibleGmailActions(root);
+  const lastAction = actions.at(-1);
   const lastGroup = lastAction?.closest<HTMLElement>('.G-Ni') ?? lastAction;
-  if (lastGroup?.parentElement === toolbar) {
+  if (lastGroup?.parentElement) {
     lastGroup.before(button);
     return;
   }
-  toolbar.append(button);
+  root.append(button);
 }
 
 function syncToolbarButton() {
@@ -229,16 +245,18 @@ function syncToolbarButton() {
 
   const existing = [...document.querySelectorAll<HTMLElement>(`[${BUTTON_ATTRIBUTE}="toolbar"]`)];
   const senders = getToolbarSenders();
-  const toolbar = getActionToolbar();
+  const root = getToolbarRoot();
 
-  if (!toolbar || senders.length === 0) {
+  if (!root || senders.length === 0) {
     existing.forEach((button) => button.remove());
     return;
   }
 
   const button = existing.shift() ?? createToolbarIcon(getToolbarSenders);
   existing.forEach((duplicate) => duplicate.remove());
-  if (button.parentElement !== toolbar) insertToolbarButton(toolbar, button);
+  if (!root.contains(button) || !isVisible(button)) {
+    placeToolbarButton(root, button);
+  }
 }
 
 function startObserver() {
