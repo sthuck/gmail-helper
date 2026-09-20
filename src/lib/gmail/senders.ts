@@ -8,10 +8,10 @@ function extractEmailFromValue(value: string | null | undefined): string | null 
   if (!value) return null;
   const trimmed = value.trim();
   if (isEmail(trimmed)) return trimmed;
-  const angled = trimmed.match(/<([^>]+)>/);
-  if (angled && isEmail(angled[1].trim())) return angled[1].trim();
-  const match = trimmed.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  return match && isEmail(match[0]) ? match[0] : null;
+  const angled = trimmed.match(/<([^>]+)>/)?.[1]?.trim();
+  if (angled && isEmail(angled)) return angled;
+  const match = trimmed.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0];
+  return match && isEmail(match) ? match : null;
 }
 
 function extractEmailFromElement(element: Element): string | null {
