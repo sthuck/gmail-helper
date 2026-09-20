@@ -1,4 +1,4 @@
-import { BUTTON_ATTRIBUTE, ICON_SVG, LABEL } from "./constants";
+import { BUTTON_ATTRIBUTE, createIconSvg, LABEL } from "./constants";
 import { searchEmailsFromSenders } from "./senders";
 
 const HOST_STYLES = [
@@ -10,7 +10,6 @@ const HOST_STYLES = [
   ["height", "20px"],
   ["min-width", "40px"],
   ["min-height", "20px"],
-  // ['margin', '0 4px'],
   ["padding", "0"],
   ["border", "0"],
   ["flex", "0 0 auto"],
@@ -21,6 +20,26 @@ const HOST_STYLES = [
   ["cursor", "pointer"],
   ["vertical-align", "middle"],
 ] as const;
+
+const BUTTON_STYLES = `
+  :host { display: inline-flex !important; }
+  button {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: #444746;
+    cursor: pointer;
+    display: inline-flex;
+    height: 32px;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    width: 32px;
+  }
+  button:hover, button:focus-visible { background: rgba(60, 64, 67, 0.12); outline: none; }
+  svg { display: block; width: 20px; height: 20px; }
+`;
 
 export function applyHostStyles(element: HTMLElement) {
   for (const [property, value] of HOST_STYLES) {
@@ -40,35 +59,21 @@ export function createToolbarIcon(getSenders: () => string[]): HTMLElement {
   applyHostStyles(host);
 
   const root = host.attachShadow({ mode: "open" });
-  root.innerHTML = `
-    <style>
-      :host { display: inline-flex !important; }
-      button {
-        align-items: center;
-        background: transparent;
-        border: 0;
-        border-radius: 50%;
-        color: #444746;
-        cursor: pointer;
-        display: inline-flex;
-        height: 32px;
-        justify-content: center;
-        margin: 0;
-        padding: 0;
-        width: 32px;
-      }
-      button:hover, button:focus-visible { background: rgba(60, 64, 67, 0.12); outline: none; }
-      svg { display: block; width: 20px; height: 20px; }
-    </style>
-    <button type="button" title="${LABEL}">${ICON_SVG}</button>
-  `;
+  const style = document.createElement("style");
+  style.textContent = BUTTON_STYLES;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.title = LABEL;
+  button.append(createIconSvg());
+  root.append(style, button);
 
   const activate = (event: Event) => {
     event.preventDefault();
     event.stopPropagation();
     searchEmailsFromSenders(getSenders());
   };
-  root.querySelector("button")?.addEventListener("click", activate);
+  button.addEventListener("click", activate);
   host.addEventListener("click", activate);
   host.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") activate(event);
