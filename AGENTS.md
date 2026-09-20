@@ -16,13 +16,17 @@ There is no InboxSDK, popup, or background/service-worker script. Chrome and Fir
 
 ## Development commands
 
-WXT + Svelte + TypeScript, package manager PNPM:
+WXT + Svelte + TypeScript. Node 26 and pnpm 12 (`packageManager` in `package.json`):
 
 - `pnpm install` — install and run `wxt prepare`
 - `pnpm dev` / `pnpm dev:firefox` — development
 - `pnpm build` / `pnpm build:firefox` — production builds (`.output/chrome-mv3`, `.output/firefox-mv2`)
 - `pnpm zip` / `pnpm zip:firefox` — store zip
 - `pnpm check` — `svelte-check` (needs `.wxt/` from `wxt prepare` or a build)
+
+CI (`.github/workflows/ci.yml`) runs `pnpm check` plus Chrome and Firefox builds on pull requests and pushes to `main`.
+
+A published GitHub release tagged `vX.Y.Z` runs `.github/workflows/release.yml`: it writes `X.Y.Z` into `package.json` (and commits that to the release target branch), then uploads `gmail-find-sender-emails-X.Y.Z-chrome.zip` and `...-firefox.zip` to the release.
 
 Load unpacked from `.output/chrome-mv3` or as a Firefox temporary add-on from `.output/firefox-mv2/manifest.json`. After load, grant site access for `mail.google.com` or the content script will not run.
 

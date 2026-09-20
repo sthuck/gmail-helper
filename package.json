@@ -4,6 +4,9 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
@@ -23,5 +26,5 @@
     "typescript": "^5.8.3",
     "wxt": "^0.20.6"
   },
-  "packageManager": "pnpm@8.6.3+sha1.30b2ad9776a393ccd1766239fd21e0c14a3c3acf"
+  "packageManager": "pnpm@12.5.1+sha512.e3f305bc784a2bc89f5ad3b6138889470fae8d2af5f36b61216ec91c2c3d64089775f9de38aac331044ea40f245cb0d5666392dfdf65824e1907ef6a2c62de5f"
 }
