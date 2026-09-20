@@ -19,6 +19,8 @@ Publish a GitHub release tagged `vX.Y.Z`. CI writes that version into `package.j
 
 ## Dev
 
+Node 26 and pnpm 12.
+
 ```sh
 pnpm install
 pnpm dev          # Chrome

@@ -16,7 +16,7 @@ There is no InboxSDK, popup, or background/service-worker script. Chrome and Fir
 
 ## Development commands
 
-WXT + Svelte + TypeScript, package manager PNPM:
+WXT + Svelte + TypeScript. Node 26 and pnpm 12 (`packageManager` in `package.json`):
 
 - `pnpm install` — install and run `wxt prepare`
 - `pnpm dev` / `pnpm dev:firefox` — development
