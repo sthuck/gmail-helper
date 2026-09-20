@@ -3,7 +3,7 @@ const LABEL = 'Find all emails from sender';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const ICON_SVG = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#444746" stroke-width="1.8" aria-hidden="true">
     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
   </svg>
 `;
@@ -230,13 +230,21 @@ function getToolbarSenders(): string[] {
 }
 
 function placeToolbarButton(root: HTMLElement, button: HTMLElement) {
-  const cluster = [...root.querySelectorAll<HTMLElement>('.G-tF')].find(isVisible)
-    ?? [...root.querySelectorAll<HTMLElement>('.G-Ni')].find(isVisible);
+  if (root.getAttribute('gh') === 'mtb' || root.classList.contains('iH')) {
+    const lastGroup = [...root.querySelectorAll<HTMLElement>('.G-Ni')].filter(isVisible).at(-1);
+    if (lastGroup) {
+      lastGroup.after(button);
+      return;
+    }
+  }
+
+  const cluster = [...root.querySelectorAll<HTMLElement>('.G-tF')].find(isVisible);
   if (cluster?.parentElement) {
-    cluster.after(button);
+    cluster.parentElement.prepend(button);
     return;
   }
-  root.append(button);
+
+  root.prepend(button);
 }
 
 function syncToolbarButton() {
